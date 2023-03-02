@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import discord
 from discord.ext import tasks
@@ -17,18 +17,21 @@ client = discord.Client(intents=intents)
 channel_ids: list[int] = []
 
 
-async def notify_the_subjects():
+async def notify_the_subjects(now):
     for channel_id in channel_ids:
         channel = client.get_channel(channel_id)
 
         counter = 0
-        logging.info("Have I already spoken?")
+        messages = []
+        logging.info(f"Have I already spoken in {channel.name}?")
         async for message in channel.history(limit=200):
             if (
                 message.author == client.user
                 and message.type == discord.MessageType.default
+                and now - message.created_at < timedelta(days=1)
             ):
                 counter += 1
+                messages.append(message)
 
         if counter == 0:
             logging.info("Gonna notify them subjects")
@@ -36,17 +39,17 @@ async def notify_the_subjects():
                 "🪴 King Bob ma sucho. Polej mu! 💧"
             )
         else:
-            logging.info("Seems like I have already spoken")
+            logging.info(f"Seems like I have already spoken: {messages}")
 
 
 # Fire every minute
 @tasks.loop(hours=6)
 async def is_king_bob_happy():
     logging.info("Checking the status")
-    today = datetime.today()
-    if today.weekday() == 4:
+    now = datetime.now(timezone.utc)
+    if now.weekday() == 4:
         logging.info("It's Friday, I'm in love!")
-        await notify_the_subjects()
+        await notify_the_subjects(now)
 
 
 @client.event
@@ -54,11 +57,13 @@ async def on_ready():
     global channel_ids
     for guild in client.guilds:
         logging.info(f"{client.user} has connected to Discord server {guild}!")
-    for channel in guild.channels:
-        if isinstance(channel, discord.TextChannel):
-            if "general" in channel.name or "ogóln" in channel.name:
-                logging.info(f"{channel.name} with ID {channel.id} is of my interest")
-                channel_ids.append(channel.id)
+        for channel in guild.channels:
+            if isinstance(channel, discord.TextChannel):
+                if "general" in channel.name or "ogólne" in channel.name:
+                    logging.info(
+                        f"{channel.name} with ID {channel.id} is of my interest"
+                    )
+                    channel_ids.append(channel.id)
     is_king_bob_happy.start()
 
 
