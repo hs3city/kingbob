@@ -47,8 +47,8 @@ async def notify_the_subjects(now):
 async def is_king_bob_happy():
     logging.info("Checking the status")
     now = datetime.now(timezone.utc)
-    if now.weekday() == 4:
-        logging.info("It's Friday, I'm in love!")
+    if now.weekday() == 2:
+        logging.info("Wednesday Evening Blues")
         await notify_the_subjects(now)
 
 
